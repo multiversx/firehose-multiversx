@@ -27,7 +27,7 @@ jobs:
         run: cd scripts && /bin/bash local-testnet.sh start
 
       - name: IntegrationTests - run tests
-        run: cd scripts && ./bin/bash shard-meta-tests.sh
+        run: cd scripts && /bin/bash shard-meta-tests.sh
 
       - name: Integration Tests - stop testnet
         run: cd scripts && /bin/bash local-testnet.sh stop
