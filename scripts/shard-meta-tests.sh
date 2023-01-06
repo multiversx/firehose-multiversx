@@ -5,7 +5,7 @@ startTest(){
 
   screen -L -A -m -d -S firehosenode ./integration-test.sh $1
 
-  sleep 90
+  sleep 100
 
   echo "finish starting firehosenode"
   echo "starting integration tests for $1"
