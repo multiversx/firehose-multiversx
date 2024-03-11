@@ -21,7 +21,7 @@ import (
 	"io"
 	"strconv"
 
-	pbmultiversx "github.com/ElrondNetwork/firehose-multiversx/types/pb/sf/multiversx/type/v1"
+	pbmultiversx "github.com/multiversx/firehose-multiversx/types/pb/sf/multiversx/type/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/streamingfast/bstream"
@@ -121,12 +121,12 @@ func printBlocksE(cmd *cobra.Command, args []string) error {
 			block.Num(),
 			block.ID()[0:7],
 			block.PreviousID()[0:7],
-			len(multiversxBlock.Transactions),
+			len(multiversxBlock.MultiversxBlock.TransactionPool.Transactions),
 		)
 		if printTransactions {
 			fmt.Println("- Transactions: ")
-			for _, t := range multiversxBlock.Transactions {
-				fmt.Println("  * ", t.Hash)
+			for hash := range multiversxBlock.MultiversxBlock.TransactionPool.Transactions {
+				fmt.Println("  * ", hash)
 			}
 			fmt.Println()
 		}
@@ -196,12 +196,12 @@ func printBlockE(cmd *cobra.Command, args []string) error {
 			block.Num(),
 			block.ID()[0:7],
 			block.PreviousID()[0:7],
-			len(multiversxBlock.Transactions),
+			len(multiversxBlock.MultiversxBlock.TransactionPool.Transactions),
 		)
 		if printTransactions {
 			fmt.Println("- Transactions: ")
-			for _, t := range multiversxBlock.Transactions {
-				fmt.Printf("  * %s\n", t.Hash)
+			for hash := range multiversxBlock.MultiversxBlock.TransactionPool.Transactions {
+				fmt.Printf("  * %s\n", hash)
 			}
 		}
 		continue
