@@ -72,9 +72,6 @@ run_node_and_firehose() {
       version="${version//v/T}"
   fi
 
-  echo ${version}
-      
-
   docker run -d --name=node \
          -v ${ROOT_DIR}/tools/docker/scripts/misc/config:/go/mx-chain-go/cmd/node/config \
          multiversx/chain-${network}:${version}.0
