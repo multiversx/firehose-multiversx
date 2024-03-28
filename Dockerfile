@@ -1,23 +1,16 @@
-FROM ubuntu:20.04
+FROM connector:latest as connector
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
-    apt-get -y install -y \
-    ca-certificates libssl1.1 vim htop iotop sysstat \
-    dstat strace lsof curl jq tzdata && \
-    rm -rf /var/cache/apt /var/lib/apt/lists/*
+FROM golang:1.21 AS builder
 
-RUN rm /etc/localtime && ln -snf /usr/share/zoneinfo/America/Montreal /etc/localtime && dpkg-reconfigure -f noninteractive tzdata
-RUN mkdir -p /app/ && curl -Lo /app/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.12/grpc_health_probe-linux-amd64 && chmod +x /app/grpc_health_probe
+WORKDIR /go/firehose-multiversx
+COPY . .
+RUN go mod tidy
+WORKDIR /go/firehose-multiversx/cmd/firemultiversx
+RUN go build -v -ldflags="-X main.appVersion=$(git describe --tags --long --dirty)"
 
-ADD /firemultiversx /app/firemultiversx
+FROM ubuntu:22.04
 
-COPY tools/docker/motd_generic /etc/motd
-COPY tools/docker/99-firehose.sh /etc/profile.d/
-
-# On SSH connection, /root/.bashrc is invoked which invokes '/root/.bash_aliases' if it exists,
-# so we hijack the file to "execute" our specialized bash script
-RUN echo ". /etc/profile.d/99-firehose.sh" > /root/.bash_aliases
-
-ENV PATH "$PATH:/app"
+COPY --from=connector /app/connector /app/connector
+COPY --from=builder /go/firehose-multiversx/cmd/firemultiversx/firemultiversx /app/firemultiversx
 
 ENTRYPOINT ["/app/firemultiversx"]
