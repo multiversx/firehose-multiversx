@@ -34,10 +34,13 @@ run_node_and_firehose_menu() {
 run_node_and_firehose() {
   local network=$1
 
+  echo "Choose what node version to deploy:"
+  read -p "Enter your choice (e.g - 1.6.18.0): " version
+
   mkdir -p ${SCRIPTS_DIR}/misc
   pushd ${SCRIPTS_DIR}/misc
 
-  git clone git@github.com:multiversx/mx-chain-${network}-config.git
+  git clone git@github.com:multiversx/mx-chain-${network}-config.git --branch "release-v${version}"
   rm -rf config
   mv -f mx-chain-${network}-config config
 
@@ -64,17 +67,17 @@ run_node_and_firehose() {
   sed -i "${node_display_line}s/.*/   NodeDisplayName = \"validator0\"/" config/prefs.toml
   sed -i "${full_archive_line}s/.*/   FullArchive = true/" config/prefs.toml
 
-  local version=$(cat config/binaryVersion | sed 's/tags\///')
-
-  if [[ "$network" == "devnet" ]]; then
-      version="${version//v/D}"
+  if [[ "$network" == "mainnet" ]]; then
+      version="v${version}"
+  elif [[ "$network" == "devnet" ]]; then
+      version="D${version}"
   elif [ "$network" == "testnet" ]; then
-      version="${version//v/T}"
+      version="T${version}"
   fi
 
   docker run -d --name=node \
          -v ${ROOT_DIR}/tools/docker/scripts/misc/config:/go/mx-chain-go/cmd/node/config \
-         multiversx/chain-${network}:${version}.0
+         multiversx/chain-${network}:${version}
 
   local node_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' node)
 
@@ -101,9 +104,11 @@ EOF
 function cleanup() {
   rm -rf ${ROOT_DIR}/tools/docker/scripts/misc/
 
+  echo "Stopping containers..."
   local node_id=$(docker stop node)
   local firehose_id=$(docker stop firehose-multiversx)
 
+  echo "Removing containers..."
   docker rm ${node_id}
   docker rm ${firehose_id}
 }
