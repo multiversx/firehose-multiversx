@@ -1,0 +1,127 @@
+#!/bin/bash
+
+set -eu
+
+SCRIPTS_DIR=$(dirname "$(realpath "$0")")
+ROOT_DIR=$(dirname $(dirname $(dirname $SCRIPTS_DIR)))
+
+# Function to display menu
+display_menu() {
+    echo "Setup local development environment"
+    echo "Please select an option:"
+    echo "1. Install node & firehose"
+    echo "2. Cleanup"
+    echo "3. Exit"
+}
+
+run_node_and_firehose_menu() {
+    echo "Choose what configuration to use for the node:"
+    echo "1. Mainnet"
+    echo "2. Devnet"
+    echo "3. Testnet"
+    echo "4. Back"
+    read -p "Enter your choice: " choice
+    case $choice in
+          1) run_node_and_firehose "mainnet";;
+          2) run_node_and_firehose "devnet";;
+          3) run_node_and_firehose "testnet";;
+          4) echo "Exiting..."; display_menu ;;
+          *) echo "Invalid choice. Please enter a number between 1 and 4." ;;
+    esac
+    echo
+}
+
+run_node_and_firehose() {
+  local network=$1
+
+  echo "Choose what node version to deploy:"
+  read -p "Enter your choice (e.g - 1.6.18.0): " version
+
+  mkdir -p ${SCRIPTS_DIR}/misc
+  pushd ${SCRIPTS_DIR}/misc
+
+  git clone git@github.com:multiversx/mx-chain-${network}-config.git --branch "release-v${version}"
+  rm -rf config
+  mv -f mx-chain-${network}-config config
+
+  # Update required entries in the config files.
+  # extrernal.toml
+  local start_line=$(grep -n "HostDriversConfig" config/external.toml | cut -d: -f1)
+  local enabled_line=$(tail -n +"$start_line" config/external.toml | grep -m 1 -n "Enabled" | cut -d: -f1 | awk -v offset=${start_line} '{print $1 + offset - 1}')
+  local mode_line=$(tail -n +"$start_line" config/external.toml | grep -m 1 -n "Mode" | cut -d: -f1 | awk -v offset=${start_line} '{print $1 + offset - 1}')
+  local url_line=$(tail -n +"$start_line" config/external.toml | grep -m 2 -n "URL" | tail -n 1 | cut -d: -f1 | awk -v offset=${start_line} '{print $1 + offset - 1}')
+  local marshaller_line=$(tail -n +"$start_line" config/external.toml | grep -m 2 -n "MarshallerType" | tail -n 1 | cut -d: -f1 | awk -v offset=${start_line} '{print $1 + offset - 1}')
+
+  sed -i "${enabled_line}s/.*/    Enabled = true/" config/external.toml
+  sed -i "${mode_line}s/.*/    Mode = \"server\"/" config/external.toml
+  sed -i "${url_line}s/.*/    URL = \"0.0.0.0:22111\"/" config/external.toml
+  sed -i "${marshaller_line}s/.*/    MarshallerType = \"gogo protobuf\"/" config/external.toml
+
+  #prefs.toml
+  local start_line=1
+  local destination_shard_line=$(tail -n +"$start_line" config/prefs.toml | grep -m 2 -n "DestinationShardAsObserver" | tail -n 1 |  cut -d: -f1 | awk -v offset=${start_line} '{print $1 + offset - 1}')
+  local node_display_line=$(tail -n +"$start_line" config/prefs.toml | grep -m 2 -n "NodeDisplayName" | tail -n 1 | cut -d: -f1 | awk -v offset=${start_line} '{print $1 + offset - 1}')
+  local full_archive_line=$(tail -n +"$start_line" config/prefs.toml | grep -m 2 -n "FullArchive" | tail -n 1 | cut -d: -f1 | awk -v offset=${start_line} '{print $1 + offset - 1}')
+
+  sed -i "${destination_shard_line}s/.*/   DestinationShardAsObserver = \"0\"/" config/prefs.toml
+  sed -i "${node_display_line}s/.*/   NodeDisplayName = \"validator0\"/" config/prefs.toml
+  sed -i "${full_archive_line}s/.*/   FullArchive = true/" config/prefs.toml
+
+  if [[ "$network" == "mainnet" ]]; then
+      version="v${version}"
+  elif [[ "$network" == "devnet" ]]; then
+      version="D${version}"
+  elif [ "$network" == "testnet" ]; then
+      version="T${version}"
+  fi
+
+  docker run -d --name=node \
+         -v ${ROOT_DIR}/tools/docker/scripts/misc/config:/go/mx-chain-go/cmd/node/config \
+         multiversx/chain-${network}:${version}
+
+  local node_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' node)
+
+  cat <<EOF > connector_config.toml
+[web_socket]
+    url = "${node_ip}:22111"
+    marshaller_type = "gogo protobuf"
+    mode = "client"
+    retry_duration = 5
+    with_acknowledge = true
+    acknowledge_timeout_in_sec = 5
+    blocking_ack_on_error = true
+    version = 1
+EOF
+
+  pushd ${ROOT_DIR}
+  docker build . -t firehose-multiversx:dev
+  docker run -d --name firehose-multiversx \
+         -v ${ROOT_DIR}/tools/docker/scripts/misc/connector_config.toml:/app/config.toml \
+         -v ${ROOT_DIR}/devel/development/dev.yaml:/app/dev.yaml \
+         firehose-multiversx:dev -c /app/dev.yaml start
+}
+
+function cleanup() {
+  rm -rf ${ROOT_DIR}/tools/docker/scripts/misc/
+
+  echo "Stopping containers..."
+  local node_id=$(docker stop node)
+  local firehose_id=$(docker stop firehose-multiversx)
+
+  echo "Removing containers..."
+  docker rm ${node_id}
+  docker rm ${firehose_id}
+}
+
+# Main script
+while true; do
+    display_menu
+    read -p "Enter your choice: " choice
+    case $choice in
+        1) run_node_and_firehose_menu ;;
+        2) cleanup ;;
+        3) echo "Exiting..."; exit ;;
+        *) echo "Invalid choice. Please enter a number between 1 and 4." ;;
+    esac
+    echo
+done
