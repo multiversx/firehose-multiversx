@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	pbmultiversx "github.com/ElrondNetwork/firehose-multiversx/types/pb/sf/multiversx/type/v1"
+	pbmultiversx "github.com/multiversx/firehose-multiversx/types/pb/sf/multiversx/type/v1"
 	"github.com/streamingfast/bstream"
 
 	pbbstream "github.com/streamingfast/pbgo/sf/bstream/v1"
@@ -21,7 +21,7 @@ func BlockFromProto(b *pbmultiversx.Block) (*bstream.Block, error) {
 		Number:         b.Number(),
 		PreviousId:     b.PreviousID(),
 		Timestamp:      b.Time(),
-		LibNum:         b.Number() - 1,
+		LibNum:         b.MultiversxBlock.HighestFinalBlockNonce,
 		PayloadKind:    pbbstream.Protocol_UNKNOWN,
 		PayloadVersion: 1,
 	}
