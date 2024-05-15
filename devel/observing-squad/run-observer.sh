@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# set -x
+
+docker run \
+    --mount type=bind,source=${OBSERVER_DIR}/db,destination=/go/mx-chain-go/cmd/node/db \
+    --mount type=bind,source=${OBSERVER_DIR}/logs,destination=/go/mx-chain-go/cmd/node/logs \
+    --mount type=bind,source=${OBSERVER_DIR}/config,destination=/config \
+    --network="host" \
+    --name squad-${SHARD} \
+    multiversx/chain-observer:v1.7.10.0 \
+    --destination-shard-as-observer=${SHARD} \
+    --validator-key-pem-file=/config/observerKey_${SHARD}.pem \
+    --display-name="${DISPLAY_NAME}"
