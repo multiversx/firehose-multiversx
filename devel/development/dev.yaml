@@ -1,0 +1,15 @@
+# Should be used only in combination with tools/docker/scripts/setup-dev-env
+start:
+  args:
+  - firehose
+  - merger
+  - reader-node
+  - relayer
+  flags:
+    common-first-streamable-block: 0
+    # Specifies the path to the connector binary, that outputs multiversx node data in stdout
+    reader-node-path: "/app/connector"
+    reader-node-data-dir: "{data-dir}/reader-node"
+
+    # Flags that will be added to the dummy chain process command
+    reader-node-arguments: "--config /app/config.toml"
