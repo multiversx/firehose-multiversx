@@ -144,6 +144,10 @@ main() {
         "stop")
             stop_stack
             ;;
+        "update")
+            stop_stack
+            run_stack
+            ;;
         "cleanup")
             stop_stack
             rm_stack

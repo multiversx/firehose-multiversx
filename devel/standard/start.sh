@@ -8,12 +8,13 @@ firemultiversx="$ROOT/../firemultiversx"
 main() {
   pushd "$ROOT" &> /dev/null
 
-  while getopts "hcfos" opt; do
+  while getopts "hcfous" opt; do
     case $opt in
       h) usage && exit 0;;
       c) clean=true;;
       f) sync_connector && exit 0;;
       o) start_observing_squad && exit 0;;
+      u) start_observing_squad && exit 0;;
       s) stop_observing_squad && exit 0;;
       \?) usage_error "Invalid option: -$OPTARG";;
     esac
@@ -55,6 +56,12 @@ sync_connector() {
 start_observing_squad() {
     pushd "$ROOT/../observing-squad"
         bash ./run.sh setup && bash ./run.sh run
+    popd
+}
+
+update_observing_squad() {
+    pushd "$ROOT/../observing-squad"
+        bash ./run.sh update
     popd
 }
 
