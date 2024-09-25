@@ -9,7 +9,7 @@ source "${ROOT}/../common/connector.sh"
 clean=
 firemultiversx="$ROOT/../firemultiversx"
 
-env_image="multiversx/chain-testnet:latest"
+env_image="multiversx/chain-devnet:latest"
 
 main() {
   pushd "$ROOT" &> /dev/null
