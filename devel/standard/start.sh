@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 
+# set -x
+
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+source "${ROOT}/../common/connector.sh"
 
 clean=
 firemultiversx="$ROOT/../firemultiversx"
+
+env_image="multiversx/chain-testnet:latest"
 
 main() {
   pushd "$ROOT" &> /dev/null
@@ -31,43 +37,21 @@ main() {
   exec "$firemultiversx" -c "$(basename "$ROOT")".yaml start "$@"
 }
 
-sync_connector() {
-  # TODO: change to use latest tag
-  local branch=0.0.6
-
-  local dir_name=connector-repo
-
-  git clone \
-    https://github.com/multiversx/mx-chain-ws-connector-firehose-go ${dir_name} \
-      --branch=${branch} \
-      --single-branch \
-      --depth=1
-
-  pushd "${dir_name}/cmd/connector" &> /dev/null
-  go build
-  popd
-
-  cp ${dir_name}/cmd/connector/connector ${ROOT} 
-  cp -r ${dir_name}/cmd/connector/config ${ROOT}
-
-  rm -rf ${dir_name}
-}
-
 start_observing_squad() {
     pushd "$ROOT/../observing-squad"
-        bash ./run.sh setup && bash ./run.sh run
+        env_image=${env_image} ./run.sh setup && env_image=${env_image} ./run.sh run
     popd
 }
 
 update_observing_squad() {
     pushd "$ROOT/../observing-squad"
-        bash ./run.sh update
+        env_image=${env_image} ./run.sh update
     popd
 }
 
 stop_observing_squad() {
     pushd "$ROOT/../observing-squad"
-        bash ./run.sh cleanup
+        env_image=${env_image} ./run.sh cleanup
     popd
 
     if [[ $clean == "true" ]]; then

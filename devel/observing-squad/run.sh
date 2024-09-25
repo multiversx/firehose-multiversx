@@ -83,7 +83,7 @@ run_observers() {
             --mount type=bind,source=${observer_dir}/config,destination=/config \
             --network="host" \
             --name squad-${shard_id} \
-            multiversx/chain-testnet:latest \
+            $env_image \
             --destination-shard-as-observer=${shard_id} \
             --validator-key-pem-file=/config/observerKey_${shard_id}.pem \
             --display-name="${display_name}" \
